@@ -6,6 +6,7 @@ from clear_eval.pipeline.evaluation_criteria import EvaluationCriteria, get_defa
 from clear_eval.pipeline.propmts import get_math_evaluation_prompt_reference_based, get_math_evaluation_prompt_reference_less, \
     get_rag_evaluation_prompt_reference_based, get_rag_evaluation_prompt_reference_free, \
     get_general_evaluation_prompt_reference_less, get_general_evaluation_prompt_reference_based
+from clear_eval.pipeline.enhanced_prompts import get_unified_mcq_evaluation_prompt, is_option_based_response
 from clear_eval.pipeline.constants import ANALYSIS_SKIPPED
 
 
@@ -59,6 +60,43 @@ class GeneralEvalUseCase(EvalUseCase):
 
     @staticmethod
     def generate_evaluation_model_prompt(row, config):
+        # Check if enhanced MCQ evaluation is enabled
+        if config.get("use_enhanced_mcq_evaluation", False):
+            model_answer = row[config['model_output_column']]
+            model_input = row[config['model_input_column']]
+
+            # Check for valid inputs
+            if pd.isna(model_input) or pd.isna(model_answer):
+                return f"{ANALYSIS_SKIPPED} - Missing Input"
+
+            # Check if model output indicates a previous error
+            if isinstance(model_answer, str) and model_answer.startswith("Error:"):
+                return f"{ANALYSIS_SKIPPED} - Prediction Error"
+
+            # When MCQ evaluation is explicitly enabled, always use MCQ template
+            # No need to check if response "looks like" an option - user requested MCQ evaluation
+
+            # Get evaluation criteria
+            evaluation_criteria = config.get('evaluation_criteria')
+            if not evaluation_criteria:
+                evaluation_criteria = get_default_evaluation_criteria()
+            if isinstance(evaluation_criteria, dict):
+                evaluation_criteria = EvaluationCriteria.from_dict(evaluation_criteria)
+            evaluation_criteria_str = evaluation_criteria.to_str()
+
+            # Get reference if available
+            reference = ""
+            if config.get("is_reference_based", False):
+                reference = row.get(config.get('reference_column', ''), "")
+                if pd.isna(reference):
+                    reference = ""
+
+            # Always use our enhanced MCQ evaluation prompt when flag is enabled
+            return get_unified_mcq_evaluation_prompt(
+                model_input, model_answer, reference, evaluation_criteria_str
+            )
+
+        # Fallback to standard general evaluation
         return GeneralEvalUseCase.generate_general_evaluation_model_prompt(row, config)
 
 class MathUseCase(EvalUseCase):

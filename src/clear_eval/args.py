@@ -40,6 +40,8 @@ def parse_args():
                                                 "the judge. Example: --evaluation-criteria '{\"correction\": \"Response is factually correct\"}'")
     parser.add_argument("--max-examples-to-analyze", type=int, help="Analyze only the specified number of examples")
     parser.add_argument("--input-columns", nargs='+', help="List of column names to present in the ui")
+    parser.add_argument("--use-enhanced-mcq-evaluation", type=str2bool, default=False,
+                        help="Enable enhanced multiple-choice question evaluation with unified prompts")
 
     args = parser.parse_args()
 

@@ -45,6 +45,9 @@ evaluation_criteria: null
 use_general_prompt: true
 perform_clustering: true
 
+# Enable enhanced MCQ evaluation for multiple-choice tasks
+use_enhanced_mcq_evaluation: false
+
 #general, rag, math
 task: general
 
